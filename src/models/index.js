@@ -21,6 +21,8 @@ Object.keys(models).forEach(key => {
 
 export { sequelize };
 
+export default models;
+
 // let users = {
 //     1: {
 //         id: '1',
