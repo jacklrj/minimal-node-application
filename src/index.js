@@ -15,6 +15,17 @@ app.use(cors());
 const server = new ApolloServer({
     typeDefs: schema,
     resolvers,
+    formatError: error => {
+        // remove the internal sequelize error message
+        // leave only the important validation error
+        const message = error.message
+            .replace('SequelizeValidationError: ', '')
+            .replace('Validation error: ', '');
+        return {
+            ...error,
+            message,
+        };
+    },
     // context: {
     //     models,
     //     me: models.users[1],
@@ -22,6 +33,7 @@ const server = new ApolloServer({
     context: async () => ({
         models,
         me: await models.User.findByLogin('rwieruch'),
+        secret: process.env.SECRET,
     }),
 });
 server.applyMiddleware({ app, path: '/graphql' });
@@ -40,6 +52,8 @@ const createUsersWithMessages = async () => {
     await models.User.create(
         {
             username: 'rwieruch',
+            email: 'hello@robin.com',
+            password: 'rwieruch',
             messages: [
                 {
                     text: 'Published the Road to learn React',
@@ -53,6 +67,8 @@ const createUsersWithMessages = async () => {
     await models.User.create(
         {
             username: 'ddavids',
+            email: 'hello@david.com',
+            password: 'ddavids',
             messages: [
                 {
                     text: 'Happy to release ...',
