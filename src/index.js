@@ -3,6 +3,7 @@ import 'dotenv/config';
 import cors from 'cors';
 import express from 'express';
 import { ApolloServer, AuthenticationError } from 'apollo-server-express';
+import http from 'http';
 
 import schema from './schema';
 import resolvers from './resolvers';
@@ -45,23 +46,39 @@ const server = new ApolloServer({
     //     models,
     //     me: models.users[1],
     // },
-    context: async ({ req }) => {
-        const me = await getMe(req);
-        return {
-            models,
-            me,
-            secret: process.env.SECRET,
-        };
+    context: async ({ req, connection }) => {
+        if (connection) {
+            return {
+                models,
+            };
+        }
+        if (req) {
+            const me = await getMe(req);
+            return {
+                models,
+                me,
+                secret: process.env.SECRET,
+            };
+        }
     },
 });
+
 server.applyMiddleware({ app, path: '/graphql' });
 
-const eraseDatabaseOnSync = true;
-sequelize.sync({ force: eraseDatabaseOnSync }).then(async () => {
-    if (eraseDatabaseOnSync) {
+const httpServer = http.createServer(app);
+server.installSubscriptionHandlers(httpServer);
+
+// const eraseDatabaseOnSync = true;
+// sequelize.sync({ force: eraseDatabaseOnSync }).then(async () => {
+//     if (eraseDatabaseOnSync) {
+
+const isTest = !!process.env.TEST_DATABASE;
+
+sequelize.sync({ force: isTest }).then(async () => {
+    if (isTest) {
         createUsersWithMessages(new Date());
     }
-    app.listen({ port: 8000 }, () => {
+    httpServer.listen({ port: 8000 }, () => {
         console.log('Apollo Server on http://localhost:8000/graphql');
     });
 });
